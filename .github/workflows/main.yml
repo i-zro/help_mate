@@ -55,7 +55,7 @@ jobs:
         fi
         # Download the existing zip from S3
         aws s3 cp s3://$S3_BUCKET/$S3_KEY existing_lambda.zip
-        unzip existing_lambda.zip -d lambda_env
+        unzip -o existing_lambda.zip -d lambda_env
         # Update files
         for file in $(git diff-tree --no-commit-id --name-only -r HEAD); do
             if [[ $file == *.py ]]; then
