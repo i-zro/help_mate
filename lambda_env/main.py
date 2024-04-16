@@ -7,70 +7,37 @@ from slack_sdk.errors import SlackApiError
 def get_secret():
     secret_name = "slack_bot_token"
     region_name = "ap-northeast-2"
-
-    # Create a Secrets Manager client
     session = boto3.session.Session()
-    client = session.client(
-        service_name='secretsmanager',
-        region_name=region_name
-    )
+    client = session.client(service_name='secretsmanager', region_name=region_name)
 
     try:
-        get_secret_value_response = client.get_secret_value(
-            SecretId=secret_name
-        )
+        response = client.get_secret_value(SecretId=secret_name)
     except ClientError as e:
         raise e
 
-    return get_secret_value_response['SecretString']
-
-    # Your code goes here.
-
-# challenge 확인용 코드
-# def lambda_handler(event, context):
-#     # API Gateway의 HTTP 요청 처리를 위해 이벤트 구조 확인
-#     print("Received event:", event)  # 로그에 입력 이벤트 출력
-#     try:
-#         body = json.loads(event['body'])
-#     except KeyError:
-#         # event['body']가 없는 경우, 적절한 JSON 응답 반환
-#         return {
-#             'statusCode': 400,
-#             'headers': {'Content-Type': 'application/json'},
-#             'body': json.dumps({'error': 'Bad Request: Missing body'})
-#         }
-
-#     # Slack challenge 요청 응답
-#     if 'challenge' in body:
-#         return {
-#             'statusCode': 200,
-#             'headers': {'Content-Type': 'application/json'},
-#             'body': json.dumps({'challenge': body['challenge']})
-#         }
-#     else:
-#         # challenge 필드가 없는 경우의 처리
-#         return {
-#             'statusCode': 400,
-#             'headers': {'Content-Type': 'application/json'},
-#             'body': json.dumps({'error': 'Bad Request: Missing challenge field'})
-#         }
+    return response['SecretString']
 
 def lambda_handler(event, context):
-    # API Gateway의 HTTP 요청 처리를 위해 이벤트 구조 확인
-    print("Received event:", event)  # 로그에 입력 이벤트 출력
+    print("Received event:", event)
     try:
         body = json.loads(event['body'])
     except KeyError:
-        # event['body']가 없는 경우, 적절한 JSON 응답 반환
         return {
             'statusCode': 400,
             'headers': {'Content-Type': 'application/json'},
             'body': json.dumps({'error': 'Bad Request: Missing body'})
         }
 
-    # 이벤트 정보에서 채널 ID와 메시지 타임스탬프 추출
+    # 봇 자신의 메시지인지 확인 (메시지 이벤트에서 'bot_id' 필드 확인)
+    if 'bot_id' in body['event']:
+        print("Ignoring bot's own message")
+        return {
+            'statusCode': 200,
+            'body': json.dumps({'message': 'Ignored bot message'})
+        }
+
     channel_id = body['event']['channel']
-    thread_ts = body['event']['ts']  # 메시지의 타임스탬프, 스레드의 식별자로 사용
+    thread_ts = body['event']['ts']
 
     secret = get_secret()
     if not secret:
@@ -83,12 +50,7 @@ def lambda_handler(event, context):
     client = WebClient(token=slack_token)
 
     try:
-        # 같은 스레드에 응답 메시지 보내기
-        response = client.chat_postMessage(
-            channel=channel_id,
-            text='확인',
-            thread_ts=thread_ts  # 스레드에 메시지를 게시하려면 이 파라미터를 사용
-        )
+        response = client.chat_postMessage(channel=channel_id, text='확인', thread_ts=thread_ts)
     except SlackApiError as e:
         print(f"Error sending message: {e}")
         return {
