@@ -21,6 +21,7 @@ def lambda_handler(event, context):
     print("Received event:", event)
     try:
         body = json.loads(event['body'])
+        print("body:", body)
     except KeyError:
         return {
             'statusCode': 400,
