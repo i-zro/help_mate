@@ -25,6 +25,7 @@ jobs:
         aws-region: ap-northeast-2 # Modify this to your desired AWS region
 
     - name: Install dependencies and package application
+      working-directory: ./lambda_env
       run: |
         mkdir lambda_env
         pip install -r requirements.txt -t lambda_env/
