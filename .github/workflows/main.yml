@@ -35,6 +35,7 @@ jobs:
         cd ..
 
     - name: Upload ZIP to S3
+      working-directory: ./lambda_env
       run: aws s3 cp help_mate.zip s3://help-mate-bucket/help_mate.zip
 
     # - name: Print changed files # To properly debug what is being deployed (It can be removed).
