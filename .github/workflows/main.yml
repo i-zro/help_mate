@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - main
-    paths:
-      - '**.py' # Change to the file extension of the language that you are using.
+    # paths:
+    #   - '**.py' # Change to the file extension of the language that you are using.
 
 jobs:
   deploy:
@@ -22,4 +22,4 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-west-2 # Modify this to your desired AWS region
+        aws-region: ap-northeast-2 # Modify this to your desired AWS region
