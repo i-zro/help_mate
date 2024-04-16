@@ -1,3 +1,12 @@
+name: Deploy Python Lambda
+
+on:
+  push:
+    branches:
+      - main
+    # paths:
+    #   - '**.py' # Change to the file extension of the language that you are using.
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
