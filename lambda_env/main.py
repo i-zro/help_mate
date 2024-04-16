@@ -29,12 +29,12 @@ def lambda_handler(event, context):
         }
 
     # 메시지 이벤트에서 봇 자신이 보낸 메시지인지 확인
-    if 'user' in body['event'] and body['event']['user'] == 'U06G2F3SND6':
-        print("Ignoring bot's own message")
+    if 'bot_id' in body['event']:
         return {
             'statusCode': 200,
             'body': json.dumps({'message': 'Ignored bot message'})
         }
+
     else:
         # 스레드 메시지 중 최상위 메시지만 처리
         event_ts = body['event'].get('ts')
