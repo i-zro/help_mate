@@ -13,8 +13,6 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v2
-      with:
-        fetch-depth: 2
 
     - name: Setup AWS CLI
       uses: aws-actions/configure-aws-credentials@v1
@@ -26,8 +24,9 @@ jobs:
     - name: Install dependencies and package application
       run: |
         mkdir lambda_package
-        pip install -r requirements.txt -t lambda_package/
-        cp main.py lambda_package/
+        # 경로를 lambda_env 폴더 내부로 설정
+        pip install -r lambda_env/requirements.txt -t lambda_package/
+        cp lambda_env/main.py lambda_package/
         cd lambda_package
         zip -r ../help_mate.zip .
         cd ..
@@ -47,6 +46,12 @@ jobs:
         fi
         aws s3 cp s3://$S3_BUCKET/$S3_KEY existing_lambda.zip
         unzip -o existing_lambda.zip -d lambda_env
+        for file in $(git diff-tree --no-commit-id --name-only -r HEAD); do
+            if [[ $file == *.py ]]; then
+                mkdir -p lambda_env/$(dirname $file)
+                cp $file lambda_env/$file
+            fi
+        done
         cd lambda_env
         zip -r ../updated_lambda.zip .
         cd ..
