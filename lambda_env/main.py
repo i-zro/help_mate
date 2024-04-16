@@ -68,8 +68,9 @@ def lambda_handler(event, context):
             'body': json.dumps({'error': 'Bad Request: Missing body'})
         }
 
-    # Slack에서 보낸 이벤트의 채널 ID를 추출
+    # 이벤트 정보에서 채널 ID와 메시지 타임스탬프 추출
     channel_id = body['event']['channel']
+    thread_ts = body['event']['ts']  # 메시지의 타임스탬프, 스레드의 식별자로 사용
 
     secret = get_secret()
     if not secret:
@@ -82,10 +83,11 @@ def lambda_handler(event, context):
     client = WebClient(token=slack_token)
 
     try:
-        # 받은 이벤트의 채널로 응답 메시지 보내기
+        # 같은 스레드에 응답 메시지 보내기
         response = client.chat_postMessage(
             channel=channel_id,
-            text='확인'
+            text='확인',
+            thread_ts=thread_ts  # 스레드에 메시지를 게시하려면 이 파라미터를 사용
         )
     except SlackApiError as e:
         print(f"Error sending message: {e}")
