@@ -28,8 +28,8 @@ def lambda_handler(event, context):
             'body': json.dumps({'error': 'Bad Request: Missing body'})
         }
 
-    # 봇 자신의 메시지인지 확인 (메시지 이벤트에서 'bot_id' 필드 확인)
-    if 'bot_id' in body['event']:
+    # 메시지 이벤트에서 봇 자신이 보낸 메시지인지 확인
+    if 'user' in body['event'] and body['event']['user'] == 'U06G2F3SND6':
         print("Ignoring bot's own message")
         return {
             'statusCode': 200,
