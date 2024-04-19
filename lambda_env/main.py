@@ -7,7 +7,9 @@ import logging
 
 # 로거 설정
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.INFO)  # 로깅 레벨 설정
+
+from common_messages import DX_TOOL_GUIDE_MESSAGE
 
 def get_secret():
     secret_name = "slack_bot_token"
@@ -37,8 +39,6 @@ def lambda_handler(event, context):
         }
 
     event_type = body['event'].get('type')
-    channel_id = body['event'].get('channel')
-    message_text = body['event'].get('text', '')
 
     if event_type == 'message_deleted':
         logger.info("Received a message_deleted event, ignoring.")
@@ -56,6 +56,7 @@ def lambda_handler(event, context):
 
     event_ts = body['event'].get('ts')
     thread_ts = body['event'].get('thread_ts', event_ts)
+    channel_id = body['event']['channel']
 
     if thread_ts != event_ts:
         logger.info("Ignoring sub-thread message")
@@ -75,19 +76,8 @@ def lambda_handler(event, context):
     slack_token = secrets['SLACK_TOKEN']
     client = WebClient(token=slack_token)
 
-    # 특정 채널 ID 확인 및 "okta" 메시지 반응
-    if channel_id == 'C06DZTAJH0X' and 'okta' in message_text.lower():
-        try:
-            response = client.chat_postMessage(channel=channel_id, text="oktahelper", thread_ts=thread_ts)
-            logger.info("Oktahelper response sent successfully")
-        except SlackApiError as e:
-            logger.error("Error sending oktahelper message: %s", e)
-            return {
-                'statusCode': 500,
-                'body': json.dumps({'error': 'Failed to send oktahelper message'})
-            }
-
-    # 기본 메시지 로직
+    message_text = DX_TOOL_GUIDE_MESSAGE
+    
     try:
         response = client.chat_postMessage(channel=channel_id, text=message_text, thread_ts=thread_ts)
         logger.info("Message sent successfully")
