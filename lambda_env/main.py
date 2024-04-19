@@ -75,6 +75,18 @@ def lambda_handler(event, context):
     secrets = json.loads(secret)
     slack_token = secrets['SLACK_TOKEN']
     client = WebClient(token=slack_token)
+    
+    # 특정 채널 ID 확인 및 "okta" 메시지 반응
+    if channel_id == 'C06DZTAJH0X' and 'okta' in message_text.lower():
+        try:
+            response = client.chat_postMessage(channel=channel_id, text="oktahelper", thread_ts=thread_ts)
+            logger.info("Oktahelper response sent successfully")
+        except SlackApiError as e:
+            logger.error("Error sending oktahelper message: %s", e)
+            return {
+                'statusCode': 500,
+                'body': json.dumps({'error': 'Failed to send oktahelper message'})
+            }
 
     message_text = DX_TOOL_GUIDE_MESSAGE
     
