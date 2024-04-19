@@ -86,4 +86,9 @@ def lambda_handler(event, context):
                 'statusCode': 200,
                 'body': json.dumps({'message': 'Oktahelper response sent successfully'})
             }
-       
+        except:
+            logger.error("Failed to send Oktahelper response")
+            return {
+                'statusCode': 500,
+                'body': json.dumps({'error': 'Failed to send Oktahelper response'})
+            }
