@@ -1,50 +1,67 @@
-    event_type = body['event'].get('type')
-    channel_id = body['event'].get('channel')
-    message_text = body['event'].get('text', '')  # Slack에서 보내진 메시지 텍스트
+import json
+from logger_config import setup_logger
+from dynamodb_utils import DynamoDBManager
+from slack_client import send_slack_message
+import re
 
-    if body['event'].get('bot_id'):
-        logger.info("Ignoring bot message")
-        return {
-            'statusCode': 200,
-            'body': json.dumps({'message': 'Ignored bot message'})
-        }
+logger = setup_logger()
 
+def handle_event(event):
+    try:
+        body = json.loads(event['body'])
+    except KeyError:
+        logger.warning("No body in the request")
+        return create_response(400, 'Bad Request: Missing body')
+        
     event_ts = body['event'].get('ts')
-    thread_ts = body['event'].get('thread_ts', event_ts)
-
-    if thread_ts != event_ts:
-        logger.info("Ignoring sub-thread message")
-        return {
-            'statusCode': 200,
-            'body': json.dumps({'message': 'Ignored sub-thread message'})
-        }
-
-    secret = get_secret()
-    if not secret:
-        logger.error("Failed to get Slack token")
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': 'Failed to get Slack token'})
-        }
-    secrets = json.loads(secret)
-    slack_token = secrets['SLACK_TOKEN']
-    client = WebClient(token=slack_token)
-   
-    # LG유플러스 CTO에 대한 요청을 확인하는 정규 표현식 패턴
-    pattern = r'.*LG유플러스 CTO에 한 사람을 초대하도록 요청했습니다.*' 
+    db_manager = DynamoDBManager()
     
     try:
-        # LG유플러스 CTO에 대한 요청일 경우 거절 메시지 전송
-        if re.match(pattern, message_text, re.IGNORECASE):
-            response = client.chat_postMessage(channel=channel_id, text=CTO_DIRECT_INVITE, thread_ts=thread_ts)
-            logger.info("LG유플러스 CTO 초대 요청에 대한 거절 메시지 전송")
-        return {
-            'statusCode': 200,
-            'body': json.dumps({'message': 'Message processed successfully'})
-        }
-    except SlackApiError as e:
-        logger.error(f"Failed to send message: {e.response['error']}")
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': f"Failed to send message: {e.response['error']}"})
-        }
+        db_manager.create_table_if_not_exists()
+        if db_manager.check_event(event_ts):
+            logger.info("Duplicate event detected, ignoring...")
+            return create_response(200, 'Duplicate event ignored')
+        db_manager.store_event(event_ts)
+    except Exception as e:
+        logger.error(f"Database operation failed: {e}")
+        return create_response(500, 'Database operation failed')
+
+    return process_slack_event(body)
+    
+def process_slack_event(body):
+    event_type = body['event'].get('type')
+    channel_id = body['event'].get('channel')
+    message_text = body['event'].get('text', '')
+    if 'ts' in body['event']:
+        thread_ts = body['event'].get('ts', '')
+    else:
+        thread_ts = None
+        logger.info("This is not a threaded message or the original message in a thread.")
+    logger.info(f"Event Type: {event_type}, Channel ID: {channel_id}, thread_ts: {thread_ts}")
+
+    if thread_ts is None:
+        logger.info("thread_ts is missing; cannot reply in thread")
+
+    if body['event'].get('bot_id'):
+        logger.info("This is a bot message, no thread_ts expected unless it's a reply.")
+        return create_response(200, 'Ignored non-user or non-message event')
+
+    pattern = r'.*LG유플러스 CTO에 한 사람을 초대하도록 요청했습니다.*'
+    if re.match(pattern, message_text, re.IGNORECASE):
+        try:
+            # Pass thread_ts to send_slack_message
+            send_slack_message(channel_id, 'CTO_DIRECT_INVITE', thread_ts)
+            return create_response(200, 'Message processed successfully')
+        except SlackApiError as e:
+            logger.error(f"Failed to send message: {e.response['error']}")
+            return create_response(500, f"Failed to send message: {e.response['error']}")
+
+    return create_response(200, 'No action required')
+
+
+def create_response(status_code, message):
+    return {'statusCode': status_code, 'body': json.dumps({'message': message})}
+
+def lambda_handler(event, context):
+    logger.info("Received event: %s", event)
+    return handle_event(event)

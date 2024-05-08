@@ -1,50 +1,26 @@
 import json
-from logger_config import setup_logger
-from dynamodb_utils import DynamoDBManager
-from slack_client import send_slack_message
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
+from secrets_manager import get_secret
+from common_messages import *
+import logging
 
-def lambda_handler(event, context):
-    logger = setup_logger()
-    logger.info("Received event: %s", event)
+logger = logging.getLogger(__name__)
+
+def send_slack_message(channel_id, text, thread_ts):
+    secrets = json.loads(get_secret("slack_bot_token"))
+    slack_token = secrets['SLACK_TOKEN']
+    client = WebClient(token=slack_token)
+    
     try:
-        body = json.loads(event['body'])
-        logger.info("Parsed body: %s", body)
-    except KeyError:
-        logger.warning("No body in the request")
-        return {
-            'statusCode': 400,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({'error': 'Bad Request: Missing body'})
-        }
-
-    event_ts = body['event'].get('ts')
-    db_manager = DynamoDBManager()
-    db_manager.create_table_if_not_exists()
-    if db_manager.check_event(event_ts):
-        logger.info("Duplicate event detected, ignoring...")
-        return {'statusCode': 200, 'body': json.dumps({'message': 'Duplicate event ignored'})}
-    db_manager.store_event(event_ts)
-
-    # 메시지 처리 로직
-[200~import json
-from logger_config import setup_logger
-from dynamodb_utils import DynamoDBManager
-from slack_client import send_slack_message
-
-def lambda_handler(event, context):
-    logger = setup_logger()
-    logger.info("Received event: %s", event)
-    try:
-        body = json.loads(event['body'])
-        logger.info("Parsed body: %s", body)
-    except KeyError:
-        logger.warning("No body in the request")
-        return {
-            'statusCode': 400,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({'error': 'Bad Request: Missing body'})
-        }
-
-    event_ts = body['event'].get('ts')
-    db_manager = DynamoDBManager()
-    db_manager.create_table_if_not_exists()
+        # Ensure thread_ts is being logged to verify correct value
+        logger.info(f"Sending message to {channel_id}, thread_ts={thread_ts}")
+        response = client.chat_postMessage(
+            channel=channel_id,
+            text=CTO_DIRECT_INVITE,
+            thread_ts=thread_ts  # This should not be None if you want to reply to a specific message
+        )
+        return response
+    except SlackApiError as e:
+        logger.error(f"Failed to send message: {e.response['error']}")
+        raise e
