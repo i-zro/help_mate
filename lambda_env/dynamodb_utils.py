@@ -4,6 +4,7 @@ from botocore.exceptions import ClientError
 class DynamoDBManager:
     def __init__(self, region_name='ap-northeast-2'):
         self.dynamodb = boto3.resource('dynamodb', region_name=region_name)
+        self.region_name = region_name # Ensure this attribute is set
         self.table_name = 'SlackEvents'
 
     def check_event(self, event_ts):
@@ -26,7 +27,7 @@ class DynamoDBManager:
             raise e
 
     def create_table_if_not_exists(self):
-        client = boto3.client('dynamodb', region_name=self.region_name)
+        client = boto3.client('dynamodb', region_name='ap-northeast-2')
         try:
             client.describe_table(TableName=self.table_name)
         except client.exceptions.ResourceNotFoundException:
@@ -40,4 +41,5 @@ class DynamoDBManager:
             logger = setup_logger()
             logger.info(f"Table {self.table_name} created successfully.")
             client.get_waiter('table_exists').wait(TableName=self.table_name)
+
 
