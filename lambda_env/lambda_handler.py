@@ -3,6 +3,7 @@ from logger_config import setup_logger
 from dynamodb_utils import DynamoDBManager
 from slack_client import send_slack_message
 import re
+from common_messages import *
 
 logger = setup_logger()
 
@@ -32,11 +33,8 @@ def process_slack_event(body):
     event_type = body['event'].get('type')
     channel_id = body['event'].get('channel')
     message_text = body['event'].get('text', '')
-    if 'ts' in body['event']:
-        thread_ts = body['event'].get('ts', '')
-    else:
-        thread_ts = None
-        logger.info("This is not a threaded message or the original message in a thread.")
+    thread_ts = body['event'].get('ts', None)
+
     logger.info(f"Event Type: {event_type}, Channel ID: {channel_id}, thread_ts: {thread_ts}")
 
     if thread_ts is None:
@@ -46,18 +44,25 @@ def process_slack_event(body):
         logger.info("This is a bot message, no thread_ts expected unless it's a reply.")
         return create_response(200, 'Ignored non-user or non-message event')
 
+    # 테스트 채널용 코드
+    if channel_id == "C072GNL8A90" and message_text.strip().lower() == "루피":
+        try:
+            send_slack_message(channel_id, '루피!', thread_ts)  # Respond with "루피!"
+            return create_response(200, 'Response sent: 루피!')
+        except SlackApiError as e:
+            logger.error(f"Failed to send message: {e.response['error']}")
+            return create_response(500, f"Failed to send message: {e.response['error']}")
+
     pattern = r'.*LG유플러스 CTO에 한 사람을 초대하도록 요청했습니다.*'
     if re.match(pattern, message_text, re.IGNORECASE):
         try:
-            # Pass thread_ts to send_slack_message
-            send_slack_message(channel_id, 'CTO_DIRECT_INVITE', thread_ts)
+            send_slack_message(channel_id, CTO_DIRECT_INVITE, thread_ts)
             return create_response(200, 'Message processed successfully')
         except SlackApiError as e:
             logger.error(f"Failed to send message: {e.response['error']}")
             return create_response(500, f"Failed to send message: {e.response['error']}")
 
     return create_response(200, 'No action required')
-
 
 def create_response(status_code, message):
     return {'statusCode': status_code, 'body': json.dumps({'message': message})}

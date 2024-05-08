@@ -2,7 +2,6 @@ import json
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from secrets_manager import get_secret
-from common_messages import *
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,7 +16,7 @@ def send_slack_message(channel_id, text, thread_ts):
         logger.info(f"Sending message to {channel_id}, thread_ts={thread_ts}")
         response = client.chat_postMessage(
             channel=channel_id,
-            text=CTO_DIRECT_INVITE,
+            text=text,
             thread_ts=thread_ts  # This should not be None if you want to reply to a specific message
         )
         return response
