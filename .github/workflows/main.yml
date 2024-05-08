@@ -26,7 +26,7 @@ jobs:
         mkdir lambda_package
         # 경로를 lambda_env 폴더 내부로 설정
         pip install -r lambda_env/requirements.txt -t lambda_package/
-        cp lambda_env/main.py lambda_package/
+        cp lambda_env/lambda_handler.py lambda_package/
         cd lambda_package
         zip -r ../help_mate.zip .
         cd ..
