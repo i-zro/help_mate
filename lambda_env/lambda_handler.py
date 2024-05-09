@@ -53,6 +53,16 @@ def process_slack_event(body):
             logger.error(f"Failed to send message: {e.response['error']}")
             return create_response(500, f"Failed to send message: {e.response['error']}")
 
+    # 테스트 채널용 코드
+    # C072GNL8A90 - test방 C04CNA12Y6N - 도협방
+    if channel_id in ["C072GNL8A90", "C04CNA12Y6N"]:
+        try:
+            send_slack_message(channel_id, DX_TOOL_GUIDE_MESSAGE, thread_ts)  # Respond with "루피!"
+            return create_response(200, 'Response sent: {DX_TOOL_GUIDE_MESSAGE}')
+        except SlackApiError as e:
+            logger.error(f"Failed to send message: {e.response['error']}")
+            return create_response(500, f"Failed to send message: {e.response['error']}")
+
     pattern = r'.*LG유플러스 CTO에 한 사람을 초대하도록 요청했습니다.*'
     if re.match(pattern, message_text, re.IGNORECASE):
         try:
