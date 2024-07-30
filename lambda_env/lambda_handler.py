@@ -8,8 +8,6 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from common_messages import *
 from urllib.parse import parse_qs
-import requests
-from atlassian import *
 
 logger = setup_logger()
 
