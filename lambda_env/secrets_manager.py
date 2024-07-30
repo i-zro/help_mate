@@ -11,4 +11,3 @@ def get_secret(secret_name, region_name="ap-northeast-2"):
         logger = setup_logger()
         logger.error("Failed to retrieve secret: %s", e)
         raise e
-
