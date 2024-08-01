@@ -76,7 +76,7 @@ def process_slack_event(body):
         return create_response(200, 'Ignored bot message')
 
     # 특정 단어가 포함된 메시지 필터링 (대소문자 구분 없이)
-    keywords_pattern = re.compile(r'\b(jira|confluence|지라|컨플|옥타|okta)\b', re.IGNORECASE)
+    keywords_pattern = re.compile(r'\b(jira|confluence|지라|컨플)\b', re.IGNORECASE)
     if keywords_pattern.search(message_text):
         logger.info("Message contains keywords, sending response")
         # 테스트 채널용 코드
