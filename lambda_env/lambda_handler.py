@@ -101,7 +101,20 @@ def process_slack_event(body):
             except SlackApiError as e:
                 logger.error(f"Failed to send message: {e.response['error']}")
                 return create_response(500, f"Failed to send message: {e.response['error']}")
-            
+    
+    confluence_admin_pattern = re.compile(r'\b임시관리자 권한\b', re.IGNORECASE)
+    product_confluence_pattern = re.compile(r'\b신청제품 : Confluence\b', re.IGNORECASE)
+    if confluence_admin_pattern.search(message_text) and product_confluence_pattern.search(message_text):
+        logger.info("Message contains specific terms for admin rights and product request")
+        # Define the channels to respond to
+        if channel_id in ["C04FHDRMZ9V", "C06DZTAJH0X"]:
+            try:
+                logger.info(f"Sending a custom response to channel {channel_id}")
+                send_slack_message(channel_id, "컨플임", body['event']['ts'])
+                return create_response(200, "Response sent: 컨플임")
+            except SlackApiError as e:
+                logger.error(f"Failed to send message: {e.response['error']}")
+                return create_response(500, f"Failed to send message: {e.response['error']}")            
     return create_response(200, 'No action required')
 
 def create_response(status_code, message):
