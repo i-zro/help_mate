@@ -107,7 +107,7 @@ def process_slack_event(body):
     if confluence_admin_pattern.search(message_text) and product_confluence_pattern.search(message_text):
         logger.info("Message contains specific terms for admin rights and product request")
         # Define the channels to respond to
-        if channel_id in ["C04FHDRMZ9V", "C06DZTAJH0X"]:
+        if channel_id in ["C06DZTAJH0X"]:
             try:
                 logger.info(f"Sending a custom response to channel {channel_id}")
                 send_slack_message(channel_id, "컨플임", body['event']['ts'])
