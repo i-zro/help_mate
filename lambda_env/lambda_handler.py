@@ -89,13 +89,13 @@ def process_slack_event(body):
                 logger.error(f"Failed to send message: {e.response['error']}")
                 return create_response(500, f"Failed to send message: {e.response['error']}")
     
-    okta_pattern = re.compile(r'\b(|옥타|okta)\b', re.IGNORECASE)
+    okta_pattern = re.compile(r'\b(옥타|okta)\b', re.IGNORECASE)
     if okta_pattern.search(message_text):
         logger.info("Message contains keywords, sending response")
         # 테스트 채널용 코드
         if channel_id in ["C072GNL8A90", "C04CNA12Y6N", "C06DZTAJH0X"]:
             try:
-                logger.info(f"Sending DX_TOOL_GUIDE_MESSAGE to channel {channel_id}")
+                logger.info(f"Sending OKTA_MESSAGE to channel {channel_id}")
                 send_slack_message(channel_id, OKTA_MESSAGE, body['event']['ts']) 
                 return create_response(200, f"Response sent: {OKTA_MESSAGE}")
             except SlackApiError as e:
