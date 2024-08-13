@@ -38,13 +38,13 @@ def handle_event(event):
     if 'event' in body_json:
         logger.info(f"Event received: {body_json['event']}")
         
-        # bot_id가 있으면 무시
-        if 'bot_id' in body_json['event']:
-            logger.info("Event from a bot detected, ignoring...")
-            return create_response(200, 'Event from a bot ignored')
+        # Check for specific bot_id
+        if body_json['event'].get('bot_id') == 'B06FAPS5KFX':
+            logger.info("Event from specific bot detected, ignoring...")
+            return create_response(200, 'Event from a specific bot ignored')
         
         event_ts = body_json['event'].get('ts')
-        event_id = body_json.get('event_id')  # 이벤트 ID를 사용하여 중복 확인
+        event_id = body_json.get('event_id')  # Use event ID for deduplication check
         db_manager = DynamoDBManager()
         
         try:
@@ -70,14 +70,14 @@ def process_slack_event(body):
 
     logger.info(f"Event Type: {event_type}, Channel ID: {channel_id}, thread_ts: {thread_ts}")
 
-    # thread_ts가 None인 경우에만 메시지 전송 (스레드의 첫 번째 메시지일 때만 반응)
+    # Only respond to the first message in a thread
     if thread_ts is not None:
         logger.info("This message is part of a thread; no action taken.")
         return create_response(200, 'Message is part of a thread; no action taken.')
 
-    if body['event'].get('bot_id'):
-        logger.info("This is a bot message, ignoring.")
-        return create_response(200, 'Ignored bot message')
+    if body['event'].get('bot_id') == 'B06FAPS5KFX':
+        logger.info("This is a specific bot message, ignoring.")
+        return create_response(200, 'Ignored specific bot message')
 
     admin_request_pattern = re.compile(r'님의 임시 관리자 권한 신청이 정상적으로 신청 완료되었습니다\.', re.IGNORECASE)
     product_request_pattern = re.compile(r':three: 신청제품 : (\w+)', re.IGNORECASE)
@@ -134,11 +134,11 @@ def process_slack_event(body):
                     logger.error(f"Failed to send message: {e.response['error']}")
                     return create_response(500, f"Failed to send message: {e.response['error']}")
 
-    # 특정 단어가 포함된 메시지 필터링 (대소문자 구분 없이)
+    # Filter messages containing specific keywords
     keywords_pattern = re.compile(r'\b(jira|confluence|지라|컨플)\b', re.IGNORECASE)
     if keywords_pattern.search(message_text):
         logger.info("Message contains keywords, sending response")
-        # 테스트 채널용 코드
+        # Code for test channels
         if channel_id in ["C072GNL8A90", "C04CNA12Y6N", "C06DZTAJH0X"]:
             try:
                 logger.info(f"Sending DX_TOOL_GUIDE_MESSAGE to channel {channel_id}")
@@ -151,7 +151,7 @@ def process_slack_event(body):
     okta_pattern = re.compile(r'\b(okta|옥타)\b', re.IGNORECASE)
     if okta_pattern.search(message_text):
         logger.info("Message contains keywords, sending response")
-        # 테스트 채널용 코드
+        # Code for test channels
         if channel_id in ["C072GNL8A90", "C04CNA12Y6N", "C06DZTAJH0X"]:
             try:
                 logger.info(f"Sending OKTA_MESSAGE to channel {channel_id}")

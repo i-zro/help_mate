@@ -2,7 +2,7 @@ import boto3
 import json
 import logging
 import requests
-from requests.auth import HTTPBasicAuth  # 이 부분을 추가해야 합니다.
+from requests.auth import HTTPBasicAuth
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -46,8 +46,8 @@ def add_user_to_group(account_id, group_name):
         return False
         
 def search_user_by_email(email):
-    secrets = get_secret('confluence_credentials')  # 이 부분을 추가하거나 수정
-    search_url = secrets['CONFLUENCE_SEARCH_URL']  # secrets에서 URL을 가져오도록 수정
+    secrets = get_secret('confluence_credentials')
+    search_url = secrets['CONFLUENCE_SEARCH_URL']
     params = {"query": email}
     headers = {"Accept": "application/json"}
     response = requests.get(search_url, headers=headers, params=params,
