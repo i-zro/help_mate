@@ -4,10 +4,13 @@ import re
 from logger_config import setup_logger
 from dynamodb_utils import DynamoDBManager
 from slack_client import send_slack_message
+from get_email import get_user_email
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from common_messages import *
 from urllib.parse import parse_qs
+from get_email import get_user_email
+from atlassian_admin import search_user_by_email, add_user_to_group
 
 logger = setup_logger()
 
@@ -75,8 +78,52 @@ def process_slack_event(body):
         logger.info("This is a bot message, ignoring.")
         return create_response(200, 'Ignored bot message')
 
+    admin_request_pattern = re.compile(r'님의 임시 관리자 권한 신청이 정상적으로 신청 완료되었습니다\.', re.IGNORECASE)
+    product_request_pattern = re.compile(r':three: 신청제품 : (\w+)', re.IGNORECASE)
+    user_mention_pattern = re.compile(r'<@([A-Z0-9]+)>')
+
+    if admin_request_pattern.search(message_text):
+        logger.info("Detected admin rights request completion message.")
+        product_match = product_request_pattern.search(message_text)
+        user_mention_match = user_mention_pattern.search(message_text)
+
+        if product_match and user_mention_match:
+            product_name = product_match.group(1)
+            user_id = user_mention_match.group(1)
+            logger.info(f"Detected product request for {product_name} by user {user_id}.")
+
+            # Fetch user email
+            try:
+                user_email = get_user_email(user_id)
+            except SlackApiError as e:
+                return create_response(500, f"Failed to fetch user email: {e.response['error']}")
+
+            if product_name.lower() == "confluence":
+                # Use the jira_utils functions
+                account_id = search_user_by_email(user_email)
+                if account_id:
+                    group_id = "8a70cb45-d9e1-47b8-a825-075dc383f192"  # Replace with your actual group ID
+                    if add_user_to_group(account_id, group_id):
+                        response_message = f"컨플: User added to group successfully. ({user_email})"
+                    else:
+                        response_message = f"컨플: Failed to add user to group. ({user_email})"
+                else:
+                    response_message = f"컨플: No user found with the given email address. ({user_email})"
+            
+            elif product_name.lower() == "jira":
+                response_message = f"지라 ({user_email})"
+            
+            if response_message:
+                try:
+                    logger.info(f"Sending response '{response_message}' to channel {channel_id}")
+                    send_slack_message(channel_id, response_message, body['event']['ts'])
+                    return create_response(200, f"Response sent: {response_message}")
+                except SlackApiError as e:
+                    logger.error(f"Failed to send message: {e.response['error']}")
+                    return create_response(500, f"Failed to send message: {e.response['error']}")
+
     # 특정 단어가 포함된 메시지 필터링 (대소문자 구분 없이)
-    keywords_pattern = re.compile(r'\b(|jira|confluence|지라|컨플)\b', re.IGNORECASE)
+    keywords_pattern = re.compile(r'\b(jira|confluence|지라|컨플)\b', re.IGNORECASE)
     if keywords_pattern.search(message_text):
         logger.info("Message contains keywords, sending response")
         # 테스트 채널용 코드
@@ -89,7 +136,7 @@ def process_slack_event(body):
                 logger.error(f"Failed to send message: {e.response['error']}")
                 return create_response(500, f"Failed to send message: {e.response['error']}")
     
-    okta_pattern = re.compile(r'\b(|옥타|okta)\b', re.IGNORECASE)
+    okta_pattern = re.compile(r'\b(okta|옥타)\b', re.IGNORECASE)
     if okta_pattern.search(message_text):
         logger.info("Message contains keywords, sending response")
         # 테스트 채널용 코드
@@ -101,22 +148,9 @@ def process_slack_event(body):
             except SlackApiError as e:
                 logger.error(f"Failed to send message: {e.response['error']}")
                 return create_response(500, f"Failed to send message: {e.response['error']}")
-    
-    confluence_admin_pattern = re.compile(r'\b임시관리자 권한\b', re.IGNORECASE)
-    product_confluence_pattern = re.compile(r'\b신청제품 : Confluence\b', re.IGNORECASE)
-    if confluence_admin_pattern.search(message_text) and product_confluence_pattern.search(message_text):
-        logger.info("Message contains specific terms for admin rights and product request")
-        # Define the channels to respond to
-        if channel_id in ["C06DZTAJH0X"]:
-            try:
-                logger.info(f"Sending a custom response to channel {channel_id}")
-                send_slack_message(channel_id, "컨플임", body['event']['ts'])
-                return create_response(200, "Response sent: 컨플임")
-            except SlackApiError as e:
-                logger.error(f"Failed to send message: {e.response['error']}")
-                return create_response(500, f"Failed to send message: {e.response['error']}")            
-    return create_response(200, 'No action required')
 
+    return create_response(200, 'No action required')
+    
 def create_response(status_code, message):
     return {'statusCode': status_code, 'body': json.dumps({'message': message})}
 
