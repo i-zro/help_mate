@@ -11,6 +11,7 @@ from common_messages import *
 from urllib.parse import parse_qs
 from get_email import get_user_email
 from atlassian_admin import search_user_by_email, add_user_to_group
+import requests
 
 logger = setup_logger()
 
@@ -82,7 +83,7 @@ def process_slack_event(body):
     product_request_pattern = re.compile(r':three: 신청제품 : (\w+)', re.IGNORECASE)
     user_mention_pattern = re.compile(r'<@([A-Z0-9]+)>')
 
-    if admin_request_pattern.search(message_text):
+    if admin_request_pattern.search(message_text) and channel_id in ["C04FHDRMZ9V", "C06DZTAJH0X"]:
         logger.info("Detected admin rights request completion message.")
         product_match = product_request_pattern.search(message_text)
         user_mention_match = user_mention_pattern.search(message_text)
@@ -101,17 +102,28 @@ def process_slack_event(body):
             if product_name.lower() == "confluence":
                 # Use the jira_utils functions
                 account_id = search_user_by_email(user_email)
+                logger.info(f"account_id: {account_id}")
                 if account_id:
-                    group_id = "8a70cb45-d9e1-47b8-a825-075dc383f192"  # Replace with your actual group ID
-                    if add_user_to_group(account_id, group_id):
-                        response_message = f"컨플: User added to group successfully. ({user_email})"
+                    group_name = "confluence"
+                    if add_user_to_group(account_id, group_name):
+                        response_message = f"컨플루엔스 임시관리자에 성공적으로 {user_email} 님을 추가하였습니다."
                     else:
                         response_message = f"컨플: Failed to add user to group. ({user_email})"
                 else:
-                    response_message = f"컨플: No user found with the given email address. ({user_email})"
+                    response_message = f"컨플루엔스 임시 관리자 : No user found with the given email address. ({user_email})"
             
             elif product_name.lower() == "jira":
-                response_message = f"지라 ({user_email})"
+                # Use the jira_utils functions
+                account_id = search_user_by_email(user_email)
+                logger.info(f"account_id: {account_id}")
+                if account_id:
+                    group_name = "jira"
+                    if add_user_to_group(account_id, group_name):
+                        response_message = f"지라 임시관리자에 성공적으로 {user_email} 님을 추가하였습니다."
+                    else:
+                        response_message = f"지라: Failed to add user to group. ({user_email})"
+                else:
+                    response_message = f"지라 임시 관리자 : No user found with the given email address. ({user_email})"
             
             if response_message:
                 try:

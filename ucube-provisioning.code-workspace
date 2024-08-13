@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "../ucube-provisioning"
+		},
+		{
+			"path": "../provisioning"
+		},
+		{
+			"path": "../my-app"
+		},
+		{
+			"path": "../my-app/240715"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {}
+}
